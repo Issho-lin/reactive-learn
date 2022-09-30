@@ -68,21 +68,38 @@ const obj = { text: "foo", ok: true };
 
 const p = createReactive(obj);
 
-// 每次修改effct1跟effect2都应该执行
+const jobQueue = new Set()
+let flush = false
+
 effect(
   () => {
-    document.body.innerText = p.ok ? p.text : "default";
+    // document.body.innerText = p.ok ? p.text : "default";
+    console.log(p.text);
   },
   {
     scheduler(fn) {
-      setTimeout(() => {
-        console.log('调度器延迟3秒再执行副作用');
-        fn();
-      }, 3000);
+    //   setTimeout(() => {
+    //     console.log('调度器延迟3秒再执行副作用');
+    //     fn();
+    //   }, 3000);
+        jobQueue.add(fn)
+        if (flush) {
+            return
+        }
+        flush = true
+        Promise.resolve().then(() => {
+            jobQueue.forEach(job => job())
+        }).finally(() => {
+            flush = false
+        })
     },
   }
 );
 
-setTimeout(() => {
-  p.text = "bar";
-}, 1000);
+// setTimeout(() => {
+//   p.text = "bar";
+// }, 1000);
+p.text = 'bar'
+p.text = 'bar2'
+p.text = 'bar3'
+p.text = 'bar4'
