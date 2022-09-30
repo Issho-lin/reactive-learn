@@ -85,13 +85,14 @@ function traverse(o, seen = new Set()) {
 }
 
 function watch(obj, cb, option) {
-  effect(() => traverse(obj), {
+  const getter = typeof obj === "function" ? obj : traverse(obj);
+  effect(getter, {
     scheduler() {
       cb();
     },
   });
   if (option?.immediate) {
-    cb()
+    cb();
   }
 }
 
@@ -99,11 +100,15 @@ const obj = { x: 1, y: 2 };
 
 const p = createReactive(obj);
 
-watch(p, () => {
-  console.log("watch回调执行了");
-}, {
-    immediate: true
-});
+watch(
+  () => p.x,
+  () => {
+    console.log("watch回调执行了");
+  },
+  {
+    immediate: true,
+  }
+);
 
 setTimeout(() => {
   p.x++;
