@@ -85,14 +85,23 @@ function traverse(o, seen = new Set()) {
 }
 
 function watch(obj, cb, option) {
-  const getter = typeof obj === "function" ? obj : traverse(obj);
-  effect(getter, {
-    scheduler() {
-      cb();
-    },
+  const getter = typeof obj === "function" ? obj : () => traverse(obj);
+  let newVal, oldVal;
+
+  const job = () => {
+    newVal = effectFn();
+    cb(newVal, oldVal);
+    oldVal = newVal;
+  };
+
+  const effectFn = effect(getter, {
+    scheduler: job,
+    lazy: true,
   });
   if (option?.immediate) {
-    cb();
+    job();
+  } else {
+    oldVal = effectFn();
   }
 }
 
@@ -102,8 +111,8 @@ const p = createReactive(obj);
 
 watch(
   () => p.x,
-  () => {
-    console.log("watch回调执行了");
+  (newVal, oldVal) => {
+    console.log("watch回调执行了---", "newVal:", newVal, "oldVal", oldVal);
   },
   {
     immediate: true,
