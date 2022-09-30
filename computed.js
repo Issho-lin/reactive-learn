@@ -24,7 +24,7 @@ function effect(fn, option) {
     const res = fn();
     effectStack.pop();
     activeEffect = effectStack[effectStack.length - 1];
-    return res
+    return res;
   };
   effectFn.deps = [];
   effectFn.option = option;
@@ -74,14 +74,23 @@ const obj = { x: 1, y: 2 };
 const p = createReactive(obj);
 
 function computed(getter) {
+  let dirty = true; // true代表需要重新计算
+  let value;
+
   const fn = effect(getter, {
-    scheduler() {},
-    lazy: true
+    scheduler() {
+        dirty = true
+    },
+    lazy: true,
   });
 
   const obj = {
     get value() {
-      return fn();
+      if (dirty) {
+        value = fn();
+        dirty = false
+      }
+      return value;
     },
   };
   return obj;
@@ -89,7 +98,8 @@ function computed(getter) {
 
 const sum = computed(() => p.x + p.y);
 console.log(sum.value);
-p.x = 4
 console.log(sum.value);
-p.y = 6
-console.log(sum.value)
+p.x = 4;
+console.log(sum.value);
+p.y = 6;
+console.log(sum.value);
