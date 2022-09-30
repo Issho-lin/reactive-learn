@@ -27,7 +27,10 @@ function effect(fn, option) {
   };
   effectFn.deps = [];
   effectFn.option = option;
-  effectFn();
+  if (!option.lazy) {
+    effectFn();
+  }
+  return effectFn;
 }
 
 function trace(target, key) {
@@ -69,40 +72,29 @@ const obj = { text: "foo", ok: true };
 
 const p = createReactive(obj);
 
-const jobQueue = new Set();
-let flush = false;
-
-effect(
+const effectFn = effect(
   () => {
-    // document.body.innerText = p.ok ? p.text : "default";
-    console.log(p.text);
+    document.body.innerText = p.ok ? p.text : "default";
   },
   {
     scheduler(fn) {
-      //   setTimeout(() => {
-      //     console.log('调度器延迟3秒再执行副作用');
-      //     fn();
-      //   }, 3000);
-      jobQueue.add(fn);
-      if (flush) {
-        return;
-      }
-      flush = true;
-      Promise.resolve()
-        .then(() => {
-          jobQueue.forEach((job) => job());
-        })
-        .finally(() => {
-          flush = false;
-        });
+      fn();
     },
+    lazy: true,
   }
 );
 
-// setTimeout(() => {
-//   p.text = "bar";
-// }, 1000);
-p.text = "bar";
-p.text = "bar2";
-p.text = "bar3";
-p.text = "bar4";
+setTimeout(() => {
+  p.text = "bar";
+  console.log('修改了响应数据，但是副作用不会默认执行');
+}, 1000);
+
+setTimeout(() => {
+    console.log('这里手动执行副作用，才开始建立依赖关系');
+    effectFn()
+}, 2000);
+
+setTimeout(() => {
+    console.log('这里修改就会自动执行副作用了');
+    p.text = "baz"
+}, 3000);
