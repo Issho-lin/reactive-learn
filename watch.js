@@ -95,7 +95,15 @@ function watch(obj, cb, option) {
   };
 
   const effectFn = effect(getter, {
-    scheduler: job,
+    scheduler() {
+        if (option?.flush === 'post') {
+            Promise.resolve().then(() => {
+                job()
+            })
+        } else {
+            job()
+        }
+    },
     lazy: true,
   });
   if (option?.immediate) {
@@ -116,6 +124,7 @@ watch(
   },
   {
     immediate: true,
+    flush: 'post' // post, sync, pre
   }
 );
 
