@@ -28,13 +28,14 @@ function effect(fn, option) {
   };
   effectFn.deps = [];
   effectFn.option = option;
-  if (!option.lazy) {
+  if (!option?.lazy) {
     effectFn();
   }
   return effectFn;
 }
 
 function trace(target, key) {
+  if (!activeEffect) return;
   let depsMap = bucket.get(target);
   if (!depsMap) {
     bucket.set(target, (depsMap = new Map()));
@@ -55,7 +56,7 @@ function trigger(target, key) {
   const depsToRun = new Set(deps);
   depsToRun &&
     depsToRun.forEach((dep) => {
-      if (dep.option.scheduler) {
+      if (dep.option?.scheduler) {
         dep.option.scheduler(dep);
       } else {
         dep();
@@ -76,20 +77,23 @@ const p = createReactive(obj);
 function computed(getter) {
   let dirty = true; // true代表需要重新计算
   let value;
+  let obj;
 
   const fn = effect(getter, {
     scheduler() {
-        dirty = true
+      dirty = true;
+      trigger(obj, "value");
     },
     lazy: true,
   });
 
-  const obj = {
+  obj = {
     get value() {
       if (dirty) {
         value = fn();
-        dirty = false
+        dirty = false;
       }
+      trace(obj, "value");
       return value;
     },
   };
@@ -97,9 +101,20 @@ function computed(getter) {
 }
 
 const sum = computed(() => p.x + p.y);
+
 console.log(sum.value);
 console.log(sum.value);
-p.x = 4;
-console.log(sum.value);
-p.y = 6;
-console.log(sum.value);
+
+setTimeout(() => {
+  p.x = 4;
+  console.log(sum.value);
+}, 1000);
+
+setTimeout(() => {
+  p.y = 6;
+  console.log(sum.value);
+}, 2000);
+
+effect(() => {
+  document.body.innerText = sum.value;
+});

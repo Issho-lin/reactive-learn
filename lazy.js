@@ -27,7 +27,7 @@ function effect(fn, option) {
   };
   effectFn.deps = [];
   effectFn.option = option;
-  if (!option.lazy) {
+  if (!option?.lazy) {
     effectFn();
   }
   return effectFn;

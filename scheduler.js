@@ -51,7 +51,7 @@ function trigger(target, key) {
   const depsToRun = new Set(deps);
   depsToRun &&
     depsToRun.forEach((dep) => {
-      if (dep.option.scheduler) {
+      if (dep.option?.scheduler) {
         dep.option.scheduler(dep);
       } else {
         dep();
