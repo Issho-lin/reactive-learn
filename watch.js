@@ -86,11 +86,18 @@ function traverse(o, seen = new Set()) {
 
 function watch(obj, cb, option) {
   const getter = typeof obj === "function" ? obj : () => traverse(obj);
-  let newVal, oldVal;
+  let newVal, oldVal, cleanup;
+
+  function onInvalidate(fn) {
+    cleanup = fn
+  }
 
   const job = () => {
     newVal = effectFn();
-    cb(newVal, oldVal);
+    if (cleanup) {
+      cleanup() // cb函数执行之前。cleanup存储的是上一次副作用中定义的过期函数
+    }
+    cb(newVal, oldVal, onInvalidate);
     oldVal = newVal;
   };
 
@@ -119,15 +126,27 @@ const p = createReactive(obj);
 
 watch(
   () => p.x,
-  (newVal, oldVal) => {
-    console.log("watch回调执行了---", "newVal:", newVal, "oldVal", oldVal);
+  (newVal, _oldVal, onInvalidate) => {
+    let expired = false
+    // console.log("watch回调执行了---", "newVal:", newVal, "oldVal", oldVal);
+    onInvalidate(() => {
+      expired = true
+    })
+    setTimeout(() => {
+      if (expired) {
+        return
+      }
+      console.log('finalVal:', newVal);
+    }, newVal * 1000);
   },
   {
     immediate: true,
-    flush: 'post' // post, sync, pre
+    // flush: 'post' // post, sync, pre
   }
 );
 
 setTimeout(() => {
-  p.x++;
+  // p.x++;
+  p.x = 5
+  p.x = 3
 }, 1000);
