@@ -76,31 +76,52 @@ function toRef(obj, key) {
       return obj[key];
     },
     set value(newVal) {
-        obj[key] = newVal
-    }
+      obj[key] = newVal;
+    },
   };
+  Object.defineProperty(wrapper, "__ISREF__", { value: true });
   return wrapper;
 }
 
 function toRefs(obj) {
-    const ret = {}
-    for (const key in obj) {
-        if (Object.hasOwnProperty.call(obj, key)) {
-            ret[key] = toRef(obj, key)
-        }
+  const ret = {};
+  for (const key in obj) {
+    if (Object.hasOwnProperty.call(obj, key)) {
+      ret[key] = toRef(obj, key);
     }
-    return ret
+  }
+  return ret;
+}
+
+function proxyRefs(obj) {
+    return new Proxy(obj, {
+        get(target, key, receiver) {
+            const res = Reflect.get(target, key, receiver)
+            if (res.__ISREF__) {
+                return res.value
+            }
+            return res
+        },
+        set(target, key, newVal, receiver) {
+            const res = target[key]
+            if (res.__ISREF__) {
+                res.value = newVal
+                return true
+            }
+            return Reflect.set(target, key, newVal, receiver)
+        }
+    })
 }
 
 const obj = { x: 1, y: 2 };
-const p = createReactive(obj)
-const r = { ...toRefs(p) };
+const p = createReactive(obj);
+const r = proxyRefs({ ...toRefs(p) });
 
 effect(() => {
-  console.log(`[${r.x.value}, ${r.y.value}]`);
+  console.log(`[${r.x}, ${r.y}]`);
 });
 
 setInterval(() => {
-    r.x.value += 2
-    r.y.value += 3
+  r.x += 2;
+  r.y += 3;
 }, 1000);
